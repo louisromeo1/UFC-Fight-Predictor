@@ -1,3 +1,7 @@
+# Louis Romeo
+# UFC Fight Predictor
+# Date: 11/25/2024
+# Purpose: 
 import os
 import pandas as pd
 
@@ -41,15 +45,26 @@ def compare_fighters(division_data, fighter1, fighter2):
             f1_value = f1_stats[column]
             f2_value = f2_stats[column]
 
-            # Ensure values are numerical
-            try:
-                f1_value = float(f1_value)
-                f2_value = float(f2_value)
-            except ValueError:
-                continue
-
-            # Handle specific cases: Rank (lower is better) and Age (younger is better)
-            if column == 'Rank' or column == 'Age':
+            # Handle categorical rank values like "C" (Champion)
+            if column == 'Rank':
+                if f1_value == 'C':
+                    advantages[fighter1] += 1
+                    advantage_categories[fighter1].append(column)
+                elif f2_value == 'C':
+                    advantages[fighter2] += 1
+                    advantage_categories[fighter2].append(column)
+                else:
+                    # Convert rank to numeric for comparison (lower is better)
+                    f1_value = int(f1_value)
+                    f2_value = int(f2_value)
+                    if f1_value < f2_value:
+                        advantages[fighter1] += 1
+                        advantage_categories[fighter1].append(column)
+                    elif f2_value < f1_value:
+                        advantages[fighter2] += 1
+                        advantage_categories[fighter2].append(column)
+            # Handle Age (younger is better)
+            elif column == 'Age':
                 if f1_value < f2_value:
                     advantages[fighter1] += 1
                     advantage_categories[fighter1].append(column)
@@ -58,12 +73,30 @@ def compare_fighters(division_data, fighter1, fighter2):
                     advantage_categories[fighter2].append(column)
             # For all other metrics, higher is better
             else:
+                try:
+                    f1_value = float(str(f1_value).replace('%', ''))
+                    f2_value = float(str(f2_value).replace('%', ''))
+                except ValueError:
+                    continue
+
                 if f1_value > f2_value:
                     advantages[fighter1] += 1
                     advantage_categories[fighter1].append(column)
                 elif f2_value > f1_value:
                     advantages[fighter2] += 1
                     advantage_categories[fighter2].append(column)
+
+    # Compare Last Fight Result
+    if 'Last Fight Result' in division_data.columns:
+        f1_result = f1_stats['Last Fight Result'].strip().lower()
+        f2_result = f2_stats['Last Fight Result'].strip().lower()
+
+        if f1_result.startswith('w') and f2_result.startswith('l'):
+            advantages[fighter1] += 1
+            advantage_categories[fighter1].append('Last Fight Result')
+        elif f1_result.startswith('l') and f2_result.startswith('w'):
+            advantages[fighter2] += 1
+            advantage_categories[fighter2].append('Last Fight Result')
 
     # Predict the winner
     if advantages[fighter1] > advantages[fighter2]:
@@ -78,6 +111,10 @@ def compare_fighters(division_data, fighter1, fighter2):
         column: (f1_stats[column], f2_stats[column])
         for column in numeric_columns if column in division_data.columns
     }
+
+    # Include Last Fight Result in the comparison
+    if 'Last Fight Result' in division_data.columns:
+        comparison['Last Fight Result'] = (f1_stats['Last Fight Result'], f2_stats['Last Fight Result'])
 
     return advantages, winner, comparison, advantage_categories
 
@@ -110,15 +147,15 @@ def main():
 
     # Print detailed comparison
     print("\nStatistical Comparison:")
-    print(f"{'Metric':<15}{fighter1:<20}{fighter2:<20}{'Advantage':<10}")
-    print("-" * 60)
+    print(f"{'Metric':<20}{fighter1:<20}{fighter2:<20}{'Advantage':<20}")
+    print("-" * 80)
     for metric, (f1_value, f2_value) in comparison.items():
         advantage = ""
         if metric in advantage_categories[fighter1]:
             advantage = fighter1
         elif metric in advantage_categories[fighter2]:
             advantage = fighter2
-        print(f"{metric:<15}{str(f1_value):<20}{str(f2_value):<20}{advantage:<10}")
+        print(f"{metric:<20}{str(f1_value):<20}{str(f2_value):<20}{advantage:<20}")
 
     # Print results
     print("\nComparison Results:")
