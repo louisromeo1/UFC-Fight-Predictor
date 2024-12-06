@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 def preprocess_data(file_path):
     """
     Preprocess the data from the CSV file for visualization.
